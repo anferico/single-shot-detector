@@ -5,6 +5,7 @@ old_stuff/
 test_annotations/
 test_images/
 tests/
+.vscode/
 *.txt
 *.jpg
 *.csv
