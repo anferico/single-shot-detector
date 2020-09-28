@@ -1,0 +1,10 @@
+__pycache__/
+annotations/
+images/
+old_stuff/
+test_annotations/
+test_images/
+tests/
+*.txt
+*.jpg
+*.csv
