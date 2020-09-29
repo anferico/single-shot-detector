@@ -20,7 +20,9 @@ ssd_inception_v3 = build_ssd_inception_v3_model(
     weights='/home/anfri/weights.h5'
 )
 
-image_obj = Image.open('/home/anfri/MyProjects/ssd/images/000021.jpg')
+image_obj = Image.open(
+    '/home/anfri/MyProjects/single-shot-detector/images/coco.jpg'
+)
 image = np.asarray(image_obj)
 image_preprocessed = inception_v3.preprocess_input(image)
 

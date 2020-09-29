@@ -206,8 +206,8 @@ def confidence_loss(
           optimization and a more stable training. Defaults to True.
 
     Returns:
-        Tensor: The average confidence loss over the samples in the 
-          batch.
+        Tensor: 1D tensor of shape (batch_size,) representing the 
+          confidence loss for each sample in the batch.
     """
 
     batch_size = tf.shape(y_true)[0]
@@ -297,8 +297,15 @@ def confidence_loss(
         total_loss / n_matched_boxes_safe, 
         0
     )
-    average_loss_per_batch_sample = tf.reduce_mean(average_loss_per_box)
-    return average_loss_per_batch_sample
+    # As prescribed by Keras's documentation (check the link below), we 
+    # should return one loss value for each sample in the batch, NOT the 
+    # average loss over the samples in the batch. The weird thing is 
+    # that it works even if I do return the average loss over the 
+    # samples in the batch.
+    # https://keras.io/api/losses/#creating-custom-losses
+    return average_loss_per_box
+    # average_loss_per_batch_sample = tf.reduce_mean(average_loss_per_box)
+    # return average_loss_per_batch_sample
 
 
 def localization_loss(y_true, y_pred):
@@ -311,8 +318,8 @@ def localization_loss(y_true, y_pred):
           representing the predicted vector.
 
     Returns:
-        Tensor: The average localization loss over the samples in the 
-          batch.
+        Tensor: 1D tensor of shape (batch_size,) representing the 
+          localization loss for each sample in the batch.
     """
 
     # Derive the positives mask from `y_true`. A value of `np.inf` for a 
@@ -342,8 +349,15 @@ def localization_loss(y_true, y_pred):
         total_loss / n_matched_boxes_safe, 
         0
     )
-    average_loss_per_batch_sample = tf.reduce_mean(average_loss_per_box)
-    return average_loss_per_batch_sample
+    # As prescribed by Keras's documentation (check the link below), we 
+    # should return one loss value for each sample in the batch, NOT the 
+    # average loss over the samples in the batch. The weird thing is 
+    # that it works even if I do return the average loss over the 
+    # samples in the batch.
+    # https://keras.io/api/losses/#creating-custom-losses    
+    return average_loss_per_box
+    # average_loss_per_batch_sample = tf.reduce_mean(average_loss_per_box)
+    # return average_loss_per_batch_sample
 
 
 def decode_predictions(

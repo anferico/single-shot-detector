@@ -46,7 +46,7 @@ from fixed_size_image_provider import SSDSquareCropper
 @click.option(
     '-c', '--config-file',
     type=click.Path(exists=True, dir_okay=False),
-    default='/home/anfri/MyProjects/ssd/config.json'
+    default='/home/anfri/MyProjects/single-shot-detector/config.json'
 )
 @click.option(
     '-w', '--pretrained-weights',
