@@ -5,7 +5,9 @@ old_stuff/
 test_annotations/
 test_images/
 tests/
+tfrecords/
 .vscode/
 *.txt
 *.jpg
 *.csv
+create_tf_records_dataset.py
