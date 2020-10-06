@@ -261,13 +261,13 @@ class SSDImageAugmentator(FixedSizeImageProvider):
                 break
 
         # Crop the original image
-        box = (
+        crop_coordinates = (
             offset_width,               # Left
             offset_height,              # Top
             offset_width + crop_width,  # Right
             offset_height + crop_height # Bottom
         )
-        image_cropped = image.crop(box=box)
+        image_cropped = image.crop(box=crop_coordinates)
         # Resize the image to the desired size
         image_resized = image_cropped.resize((
             self.target_width, 
