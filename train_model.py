@@ -18,8 +18,8 @@ from voc_utils import (
 from ssd_target_vector_builder import SSDTargetVectorBuilder
 from ssd_common import confidence_loss, localization_loss
 from default_boxes_generator import DefaultBoxesGenerator
+from fixed_size_image_provider import SSDImageAugmentator
 from ssd_directory_iterator import SSDDirectoryIterator 
-from fixed_size_image_provider import SSDSquareCropper
 
 @click.command()
 @click.option(
@@ -88,8 +88,14 @@ def main(
         background_class_name=get_background_class_name()
     )
 
-    square_cropper = SSDSquareCropper(
-        target_side_length=config['input_size'], 
+    image_augmentator = SSDImageAugmentator(
+        target_width=config['input_size'],
+        target_height=config['input_size'],
+        min_rel_crop_size=0.1,
+        contrast_range=0.25,
+        brightness_range=0.25,
+        channel_shift=True,
+        flip_prob=0.5,
         seed=None
     )
 
@@ -98,7 +104,7 @@ def main(
         annotations=train_annotations,
         ssd_target_vector_builder=target_vector_builder,
         mode='train',
-        fixed_size_image_provider=square_cropper,
+        fixed_size_image_provider=image_augmentator,
         input_preprocessing_function=inception_v3.preprocess_input,
         batch_size=config['batch_size'],
         shuffle=True,
