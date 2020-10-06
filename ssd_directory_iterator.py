@@ -142,7 +142,7 @@ class SSDDirectoryIterator(Iterator):
               a pair consisting of a batch of target vectors for 
               classification and a batch of target vectors for 
               localization.
-        """     
+        """
 
         batch_x = []
         batch_y_conf = []

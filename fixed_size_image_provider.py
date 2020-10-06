@@ -204,53 +204,62 @@ class SSDImageAugmentator(FixedSizeImageProvider):
               information about the objects appearing in the image.
         """
 
-        rel_crop_size = np.random.uniform(low=self.min_rel_crop_size, high=1.0)
-        crop_width = int(math.sqrt(rel_crop_size) * image.width)
-        crop_height = int(math.sqrt(rel_crop_size) * image.height)
-        offset_width = np.random.randint(0, image.width - crop_width + 1)
-        offset_height = np.random.randint(0, image.height - crop_height + 1)
-        flip_horizontally = np.random.rand() <= self.flip_prob
-        valid_objects = []
-        for obj in annotation['objects']:
-            ground_truth_box = obj['bounding_box']
-            # Check if the center of the ground truth box falls within 
-            # the chosen rectangular crop. If it doesn't, the ground 
-            # truth box is dropped
-            cx, cy = ground_truth_box.center_x, ground_truth_box.center_y
-            if (offset_width <= cx <= offset_width + crop_width
-                and offset_height <= cy <= offset_height + crop_height):
-                # Compute the new coordinates of the ground truth box 
-                # relative to the rectangular crop
-                new_x_min = max(0, ground_truth_box.x_min - offset_width)
-                new_y_min = max(0, ground_truth_box.y_min - offset_height)
-                new_x_max = min(
-                    crop_width, 
-                    ground_truth_box.x_max - offset_width
-                )
-                new_y_max = min(
-                    crop_height, 
-                    ground_truth_box.y_max - offset_height
-                )
-                # Account for the possible horizontal flipping of the 
-                # image. Notice that `new_y_min` and `new_y_max` remain 
-                # unchanged
-                if flip_horizontally:
-                    new_x_min, new_x_max = (
-                        crop_width - new_x_max, 
-                        crop_width - new_x_min
+        while True:
+            rel_crop_size = np.random.uniform(
+                low=self.min_rel_crop_size, 
+                high=1.0
+            )
+            crop_width = int(math.sqrt(rel_crop_size) * image.width)
+            crop_height = int(math.sqrt(rel_crop_size) * image.height)
+            offset_width = np.random.randint(0, image.width - crop_width + 1)
+            offset_height = np.random.randint(0, image.height - crop_height + 1)
+            flip_horizontally = np.random.rand() <= self.flip_prob
+            valid_objects = []
+            for obj in annotation['objects']:
+                ground_truth_box = obj['bounding_box']
+                # Check if the center of the ground truth box falls 
+                # within the chosen rectangular crop. If it doesn't, the 
+                # ground truth box is dropped
+                cx, cy = ground_truth_box.center_x, ground_truth_box.center_y
+                if (offset_width <= cx <= offset_width + crop_width
+                    and offset_height <= cy <= offset_height + crop_height):
+                    # Compute the new coordinates of the ground truth 
+                    # box relative to the rectangular crop
+                    new_x_min = max(0, ground_truth_box.x_min - offset_width)
+                    new_y_min = max(0, ground_truth_box.y_min - offset_height)
+                    new_x_max = min(
+                        crop_width, 
+                        ground_truth_box.x_max - offset_width
                     )
-                # Update the bounding box
-                updated_box = BoundingBox(
-                    (new_x_min / crop_width) * self.target_width,
-                    (new_y_min / crop_height) * self.target_height,
-                    (new_x_max / crop_width) * self.target_width,
-                    (new_y_max / crop_height) * self.target_height
-                )
-                valid_objects.append({
-                    'class': obj['class'],
-                    'bounding_box': updated_box
-                })
-            
+                    new_y_max = min(
+                        crop_height, 
+                        ground_truth_box.y_max - offset_height
+                    )
+                    # Account for the possible horizontal flipping of 
+                    # the image. Notice that `new_y_min` and `new_y_max` 
+                    # remain unchanged
+                    if flip_horizontally:
+                        new_x_min, new_x_max = (
+                            crop_width - new_x_max, 
+                            crop_width - new_x_min
+                        )
+                    # Update the bounding box
+                    updated_box = BoundingBox(
+                        (new_x_min / crop_width) * self.target_width,
+                        (new_y_min / crop_height) * self.target_height,
+                        (new_x_max / crop_width) * self.target_width,
+                        (new_y_max / crop_height) * self.target_height
+                    )
+                    valid_objects.append({
+                        'class': obj['class'],
+                        'bounding_box': updated_box
+                    })
+            # Exit the loop if there's at least one valid bounding box 
+            # within the random rectangular crop, otherwise start over 
+            # and try another crop
+            if len(valid_objects) > 0:
+                break
+
         # Crop the original image
         box = (
             offset_width,               # Left
