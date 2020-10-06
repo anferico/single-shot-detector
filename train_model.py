@@ -85,7 +85,8 @@ def main(
         default_boxes_generator=def_boxes_gen,
         iou_threshold=config['iou_threshold'],
         class_to_index_map=class_to_index_map,
-        background_class_name=get_background_class_name()
+        background_class_name=get_background_class_name(),
+        label_smoothing_factor=0.1
     )
 
     image_augmentator = SSDImageAugmentator(
