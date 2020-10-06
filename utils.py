@@ -2,9 +2,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 from boxes import BoundingBox
 
-def class_to_one_hot_vector(class_id, n_classes):
+def class_to_one_hot_vector(class_id, n_classes, smoothing_factor=0.0):
     one_hot_vector = [0.0] * n_classes
     one_hot_vector[class_id] = 1.0
+    one_hot_vector = [(1 - smoothing_factor)*l + smoothing_factor/n_classes 
+                      for l in one_hot_vector]
     return one_hot_vector
 
 

@@ -19,6 +19,9 @@ class SSDTargetVectorBuilder(object):
           default box and a ground truth box for determining whether 
           there's a match between the two or not. An IoU greater than or 
           equal to the threshold indicates a match. Defaults to 0.5.
+        label_smoothing_factor (float, optional): Factor used to smooth 
+          classification labels. Must be between 0 and 1. Defaults to 
+          0, which corresponds to not applying label smoothing.
     """
 
     def __init__(
@@ -26,13 +29,15 @@ class SSDTargetVectorBuilder(object):
         default_boxes_generator,
         class_to_index_map,
         background_class_name,
-        iou_threshold=0.5
+        iou_threshold=0.5,
+        label_smoothing_factor=0.0
     ):
         self.default_boxes_generator = default_boxes_generator
         self.class_to_index_map = class_to_index_map
         self.background_class_name = background_class_name
         self.iou_threshold = iou_threshold
-    
+        self.label_smoothing_factor = label_smoothing_factor
+
 
     def build_target_vector(self, annotation):
         """Builds a target vector for an image given its bounding box 
@@ -92,7 +97,8 @@ class SSDTargetVectorBuilder(object):
                 target_vector_for_classification.extend(
                     class_to_one_hot_vector(
                         class_id=class_id,
-                        n_classes=len(self.class_to_index_map)
+                        n_classes=len(self.class_to_index_map),
+                        smoothing_factor=self.label_smoothing_factor
                     )
                 )
                 # Set the offsets for the default box as the offsets 
@@ -109,7 +115,8 @@ class SSDTargetVectorBuilder(object):
                 target_vector_for_classification.extend(
                     class_to_one_hot_vector(
                         class_id=class_id, 
-                        n_classes=len(self.class_to_index_map)
+                        n_classes=len(self.class_to_index_map),
+                        smoothing_factor=self.label_smoothing_factor
                     )
                 )
                 # This default box didn't match any ground truth box, 
