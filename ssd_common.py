@@ -92,12 +92,51 @@ def _get_hard_negatives_mask(
           0 otherwise.
     """
 
-    # Let's sort the scores relative to the negative boxes in descending 
-    # order of confidence loss. Since the confidence loss is cross 
-    # entropy, this is equivalent to sorting the probability scores in 
-    # ascending order. `y_pred_background` contains probability scores 
-    # for both positive and negative boxes, so we can't just sort it and 
-    # call it a day.
+    # Compute the number of hard negatives for each sample in the batch. 
+    # This number will be at most `negatives_to_positives_ratio` times 
+    # `n_positives`. If `n_positives` is 0, then all negatives are 
+    # considered hard negatives
+    n_positives = tf.reduce_sum(1 - negatives_mask, axis=1) # (batch_size,)
+    n_negatives = tf.reduce_sum(negatives_mask, axis=1) # (batch_size,)
+    n_hard_negatives = tf.where(
+        n_positives == 0,
+        n_negatives,
+        tf.minimum(negatives_to_positives_ratio * n_positives, n_negatives)
+    )
+    n_hard_negatives = tf.cast(n_hard_negatives, tf.int32) # (batch_size,)
+    # For each sample in the batch, repeat the number of hard negatives 
+    # along the column axis for a number of times equal to the total 
+    # amount of default boxes. This will allow us to build a preliminary 
+    # version of the hard negatives mask (refer to the next step below)
+    n_hard_negatives = tf.broadcast_to( # (batch_size, total_default_boxes)
+        n_hard_negatives[:, tf.newaxis], # (batch_size, 1)
+        tf.shape(negatives_mask)
+    )
+    # Build a mask that retains the desired number of hard negatives. 
+    # Note that this mask is not quite what we're looking for, because 
+    # it only works under the assumption that the default boxes are 
+    # sorted in increasing order of "hardness", with all the negative 
+    # boxes coming before any of the positive boxes
+    ranges = tf.broadcast_to( # (batch_size, total_default_boxes)
+        tf.range(tf.shape(n_hard_negatives)[1]), 
+        tf.shape(n_hard_negatives)
+    )
+    hard_negatives_mask_sorted = tf.where( # (batch_size, total_default_boxes)
+        ranges < n_hard_negatives, 
+        1., 
+        0.
+    )
+    # What we would like to have is a binary mask that retains the 
+    # desired amount of hard negatives when applied to the original 
+    # `y_pred_background`, where the default boxes appear in their 
+    # original order. The trick we'll use involves "unsorting" the mask 
+    # obtained in the previous step. First of all, we're going to sort 
+    # the scores relative to the negative boxes in descending order of 
+    # confidence loss. Since the confidence loss is the standard softmax 
+    # cross-entropy, this is equivalent to sorting the probability 
+    # scores in ascending order. Such probability scores are a measure 
+    # of the "hardness" of negative boxes
+
     # Let's use a trick and divide `y_pred_background` by 
     # `negatives_mask` element-wise. Since `negatives_mask` is a binary 
     # array, there are two possible scenarios: the value of the mask is 
@@ -106,64 +145,23 @@ def _get_hard_negatives_mask(
     # positive box), in which case the original score blows up to 
     # infinity due to the division by 0. This way, when we try to sort 
     # the probability scores, those relative to negative boxes will be 
-    # brought to the top (in ascending order), whereas those relative to 
-    # positive boxes will be moved to the bottom, since infinity is 
-    # bigger than any other value. This trick allows us to sort the 
-    # probability scores for negative boxes while also separating them 
-    # from positive boxes.
+    # brought to the top, whereas those relative to positive boxes will 
+    # be moved to the bottom, since infinity is bigger than any other 
+    # value. This trick allows us to sort the probability scores for 
+    # negative boxes while also separating them from positive boxes
     negatives_scores = y_pred_background / negatives_mask
     negatives_scores_argsort = tf.argsort(
         negatives_scores,
         axis=1
-    )
-    # Retain "hard" negatives and drop regular ones. The number of hard 
-    # negatives can be at most `negatives_to_positives_ratio` times the 
-    # number of positives. 
-    # Let's pretend we have the probability scores for each default box 
-    # sorted in descending order of confidence loss (that is, in the 
-    # order implied by `negatives_scores_argsort`). Then, if we build a 
-    # binary array such that the first 
-    # min(negatives_to_positives_ratio * n_positives, n_negatives) 
-    # elements are equal to 1 and the rest are equal to 0, we have
-    # constructed a mask that applied to the sorted probability scores 
-    # gives us the hard negatives' scores.
-    n_positives = tf.reduce_sum(1 - negatives_mask, axis=1)
-    n_negatives = tf.reduce_sum(negatives_mask, axis=1)
-    n_hard_negatives = tf.where(
-        n_positives == 0,
-        n_negatives,
-        tf.minimum(negatives_to_positives_ratio * n_positives, n_negatives)
-    )
-    n_hard_negatives = tf.cast(n_hard_negatives, tf.int32)
-    n_hard_negatives = tf.broadcast_to(
-        n_hard_negatives[:, tf.newaxis], 
-        tf.shape(negatives_mask)
-    )
-    ranges = tf.broadcast_to(
-        tf.range(tf.shape(n_hard_negatives)[1]), 
-        tf.shape(n_hard_negatives)
-    )
-    hard_negatives_mask_sorted = tf.where(
-        ranges < n_hard_negatives, 
-        1., 
-        0.
-    )
-    # The binary mask that we have built in the previous step is not 
-    # quite what we were looking for. In fact, it must be applied to the 
-    # sorted probability scores for it to filter out all the non-hard 
-    # negatives, whereas what we would like to have is a binary mask 
-    # that does the same thing when applied to `y_pred_background`, that 
-    # is the unsorted probability scores.
-    # The trick we'll use involves "unsorting" the mask obtained in the 
-    # previous step. The `negatives_scores_argsort` we computed earlier 
-    # can be used to sort the probability scores. What we're trying to 
-    # compute here is the "inverse" of that, namely an argsort that if 
-    # applied to the sorted probabilities, gives us back the original, 
-    # unsorted probability scores. What would happen then if we were to 
-    # apply the same "inverse" argsort to the binary mask obtained in 
-    # the previous step? As it turns out, we would obtain a mask that 
-    # filters out the non-hard negatives when applied to 
-    # `y_pred_background`.
+    )    
+    # The `negatives_scores_argsort` we computed earlier can be used to 
+    # sort the probability scores. What we're trying to compute here is 
+    # the "inverse" of that, namely an argsort that if applied to the 
+    # sorted probabilities, gives us back the probability scores in 
+    # their original order. As it turns out, if we apply the very same 
+    # "inverse" argsort to `hard_negatives_mask_sorted`, we will obtain 
+    # a mask that retains only hard negatives when applied to 
+    # `y_pred_background`
     combined_indices = tf.stack(
         [ranges, negatives_scores_argsort], 
         axis=-1
@@ -172,7 +170,8 @@ def _get_hard_negatives_mask(
         combined_indices[:, :, 1:], 
         axis=1
     )[:, :, 0]
-    # Unsort `hard_negatives_mask_sorted`
+    # Unsort `hard_negatives_mask_sorted` to get the final version of 
+    # the hard negatives mask
     batch_indices = tf.reshape(
         tf.range(tf.shape(y_pred_background)[0]), 
         (-1, 1)
