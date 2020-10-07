@@ -162,16 +162,24 @@ def _get_hard_negatives_mask(
     # "inverse" argsort to `hard_negatives_mask_sorted`, we will obtain 
     # a mask that retains only hard negatives when applied to 
     # `y_pred_background`
-    combined_indices = tf.stack(
+    combined_indices = tf.stack( # (batch_size, total_default_boxes, 2)
         [ranges, negatives_scores_argsort], 
         axis=-1
     )
     negatives_confidences_argsort_inv = tf.argsort(
-        combined_indices[:, :, 1:], 
+        combined_indices[:, :, 1:], # (batch_size, total_default_boxes, 1)
         axis=1
-    )[:, :, 0]
+    )[:, :, 0] # (batch_size, total_default_boxes)
     # Unsort `hard_negatives_mask_sorted` to get the final version of 
-    # the hard negatives mask
+    # the hard negatives mask. In NumPy, we would simply call:
+    #   np.take_along_axis(
+    #      hard_negatives_mask_sorted, 
+    #      negatives_confidences_argsort_inv
+    #   )
+    # Unfortunately, `take_along_axis` is not implemented in the 
+    # TensorFlow 2.3.0, which is the version I'm using (although it is 
+    # available in the nightly version), so the process becomes a little 
+    # more involved, requiring the use of `tf.gather_nd`
     batch_indices = tf.reshape(
         tf.range(tf.shape(y_pred_background)[0]), 
         (-1, 1)
