@@ -146,8 +146,9 @@ def main(
         y_true,
         y_pred,
         n_classes=n_classes,
+        background_class_id=0,
         hard_negative_mining=config['hard_negative_mining'],
-        background_class_id=0
+        negatives_to_positives_ratio=3.0
     )
     model.compile(
         optimizer=optimizer,

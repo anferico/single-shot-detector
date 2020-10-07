@@ -269,10 +269,8 @@ class SSDImageAugmentator(FixedSizeImageProvider):
         )
         image_cropped = image.crop(box=crop_coordinates)
         # Resize the image to the desired size
-        image_resized = image_cropped.resize((
-            self.target_width, 
-            self.target_height
-        ))
+        target_size = (self.target_width, self.target_height)
+        image_resized = image_cropped.resize(target_size)
         # Apply photometric distortions to the image
         brightness_factor = np.random.uniform(
             low=1-self.brightness_range, 

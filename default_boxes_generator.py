@@ -60,10 +60,10 @@ class DefaultBoxesGenerator(object):
         # associated with higher-resolution feature maps will have a 
         # smaller scale, whereas boxes associated with lower-resolution 
         # feature maps are assigned a larger scale
-        def_boxes_rel_scales = [
+        def_boxes_rel_scales = [self.min_scale] + [
             (self.min_scale 
              + (self.max_scale - self.min_scale) * k / (n_feature_maps - 1))
-            for k in range(n_feature_maps)
+            for k in range(1, n_feature_maps)
         ]
         # TODO: Find a way to include the additional scale for the 
         # special case of when the aspect ratio is 1:1
@@ -75,8 +75,8 @@ class DefaultBoxesGenerator(object):
                     # of the k-th feature map. Note that all such boxes 
                     # have the same center, irrespective of their aspect 
                     # ratios
-                    boxes_center_x = ((i + 0.5) / height) * image_height
-                    boxes_center_y = ((j + 0.5) / width) * image_width
+                    boxes_center_x = ((j + 0.5) / width) * image_width                    
+                    boxes_center_y = ((i + 0.5) / height) * image_height
                     for r in self.default_boxes_aspect_ratios:
                         # Compute the width and height of a default box 
                         # with aspect ratio `r`.

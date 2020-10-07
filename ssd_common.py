@@ -65,7 +65,11 @@ def _smooth_l1(x):
     return tf.where(abs_x < 1, 0.5 * x**2, abs_x - 0.5)
 
 
-def _get_hard_negatives_mask(y_pred_background, negatives_mask):
+def _get_hard_negatives_mask(
+    y_pred_background, 
+    negatives_mask, 
+    negatives_to_positives_ratio=3.0
+):
     """Computes a binary mask that retains hard negatives, filtering out 
     all other negatives.
 
@@ -77,9 +81,14 @@ def _get_hard_negatives_mask(y_pred_background, negatives_mask):
           total_default_boxes) containing binary flags indicating 
           whether a given default box is negative (i.e. it didn't match 
           any of the ground truth boxes).
+        negatives_to_positives_ratio (float, optional): Ratio between 
+          the number of negative and positive boxes after the hard 
+          negative mining step. Defaults to 3.0, which corresponds to 
+          retaining at most 3 negative boxes for each positive box (as 
+          in the original SSD paper).
     Returns:
         Tensor: Binary mask of shape (batch_size, total_default_boxes) 
-          that is equal to 1 if the default box is an hard negative, and 
+          that is equal to 1 if the default box is a hard negative, and 
           0 otherwise.
     """
 
@@ -108,12 +117,13 @@ def _get_hard_negatives_mask(y_pred_background, negatives_mask):
         axis=1
     )
     # Retain "hard" negatives and drop regular ones. The number of hard 
-    # negatives can be at most three times the number of positives (as 
-    # mentioned in the original SSD paper). 
+    # negatives can be at most `negatives_to_positives_ratio` times the 
+    # number of positives. 
     # Let's pretend we have the probability scores for each default box 
     # sorted in descending order of confidence loss (that is, in the 
     # order implied by `negatives_scores_argsort`). Then, if we build a 
-    # binary array such that the first min(3 * n_positives, n_negatives) 
+    # binary array such that the first 
+    # min(negatives_to_positives_ratio * n_positives, n_negatives) 
     # elements are equal to 1 and the rest are equal to 0, we have
     # constructed a mask that applied to the sorted probability scores 
     # gives us the hard negatives' scores.
@@ -122,7 +132,7 @@ def _get_hard_negatives_mask(y_pred_background, negatives_mask):
     n_hard_negatives = tf.where(
         n_positives == 0,
         n_negatives,
-        tf.minimum(3 * n_positives, n_negatives)
+        tf.minimum(negatives_to_positives_ratio * n_positives, n_negatives)
     )
     n_hard_negatives = tf.cast(n_hard_negatives, tf.int32)
     n_hard_negatives = tf.broadcast_to(
@@ -186,7 +196,8 @@ def confidence_loss(
     y_pred, 
     n_classes,
     background_class_id=0,
-    hard_negative_mining=True
+    hard_negative_mining=True,
+    negatives_to_positives_ratio=3.0
 ):
     """Computes the confidence loss of an SSD model.
 
@@ -204,7 +215,12 @@ def confidence_loss(
           hard negative mining so to reduce the imbalance between 
           negative and positive examples. Usually leads to faster 
           optimization and a more stable training. Defaults to True.
-
+        negatives_to_positives_ratio (float, optional): Ratio between 
+          the number of negative and positive boxes after the hard 
+          negative mining step. Ignored if `hard_negative_mining` is 
+          False. Defaults to 3.0, which corresponds to retaining at most 
+          3 negative boxes for each positive box (as in the original SSD 
+          paper).
     Returns:
         Tensor: 1D tensor of shape (batch_size,) representing the 
           confidence loss for each sample in the batch.
@@ -236,7 +252,8 @@ def confidence_loss(
         y_pred_background = y_pred_reshaped[:, :, background_class_id]
         hard_negatives_mask = _get_hard_negatives_mask(
             y_pred_background, 
-            negatives_mask
+            negatives_mask,
+            negatives_to_positives_ratio
         )
         # Reshape `hard_negatives_mask` so that it can be applied to 
         # `y_pred`
