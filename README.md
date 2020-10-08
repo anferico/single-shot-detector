@@ -20,7 +20,7 @@ In order to train the model on the Pascal VOC 2007 dataset, simply run [`train_m
 See [`config.json`](config.json) for an example of a configuration file.
 
 ## Pre-trained weights
-Pre-trained weights can be found here: <insert_link>
+Coming soon
 
 ## Customize the model
 As mentioned before, the base network used for this project is **Inception-V3**, whereas the dataset used for training the model is **Pascal VOC 2007**. You can, however, use whichever base network and dataset you wish.
