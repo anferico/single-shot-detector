@@ -12,11 +12,12 @@ In order to train the model on the Pascal VOC 2007 dataset, simply run [`train_m
 -ta, --training-annotations-directory DIRECTORY    # Directory containing the annotations for training images, in XML format
 -vi, --validation-images-directory DIRECTORY       # Directory containing the validation images
 -va, --validation-annotations-directory DIRECTORY  # Directory containing the annotations for validation images, in XML format
--vs, --validation-steps INTEGER                    # Number of validation samples to run through the network at the end of each epoch
+-vs, --validation-steps INTEGER                    # Number of validation samples to run through the network at the end of each epoch to estimate the validation error
 -c, --config-file FILE                             # Configuration file containing training parameters, in JSON format
 -w, --pretrained-weights FILE                      # Binary file containing pre-trained weights, in H5 format. Useful to resume training. If not specified, the weights will be initialized randomly
 -o, --output-dir DIRECTORY                         # Directory where the final weights and the training history will be saved
 ```
+See [`config.json`](config.json) for an example of a configuration file.
 
 ## Pre-trained weights
 Pre-trained weights can be found here: <insert_link>
