@@ -9,8 +9,6 @@ from tensorflow.keras.layers import (
 import tensorflow as tf
 import numpy as np
 
-from boxes import BoundingBox
-
 def _conv_bn_relu(
     filters,
     kernel_size,
@@ -391,7 +389,7 @@ def decode_predictions(
     image_height,
     image_width,
     n_classes,
-    clip_boxes_to_image_bounds=True
+    post_processing_function=None
 ):
     """Decodes raw predictions made by an SSD object detection model.
 
@@ -408,11 +406,12 @@ def decode_predictions(
           predictions (needed by `default_boxes_generator`).
         n_classes (int): Number of different classes that objects can 
           belong to, including the background class.
-        clip_boxes_to_image_bounds (bool, optional): Whether or not to 
-          clip the predicted boxes to the image's bounds, in case they 
-          include regions outside the image. Note that this will affect 
-          any post-processing of the predicted boxes, such as non-max 
-          suppression. Defaults to True.
+        post_processing_function (Callable, optional): Function for 
+          post-processing predicted boxes. Must accept three arguments, 
+          namely the predicted box, the image's width and the image's 
+          height, and return either a `BoundingBox` instance or `None` 
+          (indicating that the predicted box should be discarded). 
+          Defaults to None.
 
     Yields:
         tuple(BoundingBox, int, float): Triplets containing the 
@@ -444,15 +443,16 @@ def decode_predictions(
             dev_w, 
             dev_h
         )
-        if clip_boxes_to_image_bounds:
-            # Clip the predicted box if it extends beyond the image's 
-            # boundaries
-            predicted_box = BoundingBox(
-                max(predicted_box.x_min, 1),
-                max(predicted_box.y_min, 1),
-                min(predicted_box.x_max, image_width - 1),
-                min(predicted_box.y_max, image_height - 1)
+        if post_processing_function is not None:
+            # Post-process the predicted box
+            predicted_box = post_processing_function(
+                predicted_box, 
+                image_width, 
+                image_height
             )
+            # Do not yield anything if the box is invalid
+            if predicted_box is None:
+                continue
         
         yield predicted_box, predicted_class, predicted_confidence
 

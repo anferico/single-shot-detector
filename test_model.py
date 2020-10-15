@@ -7,9 +7,9 @@ from ssd_inception_v3 import (
     get_ssd_inception_v3_feature_map_sizes
 )
 from ssd_common import decode_predictions, non_max_suppression
+from utils import draw_predicted_boxes, clip_predicted_box
 from default_boxes_generator import DefaultBoxesGenerator
 from voc_utils import get_index_to_class_map
-from utils import draw_predicted_boxes
 
 index_to_class_map = get_index_to_class_map()
 
@@ -38,6 +38,12 @@ y_pred_conf, y_pred_loc = ssd_inception_v3(
     training=False
 )
 
+clip_box = lambda b, w, h: clip_predicted_box(
+    predicted_box=b, 
+    image_width=w, 
+    image_height=h, 
+    visible_area_threshold=0.6
+)
 pred_boxes_gen = decode_predictions(
     y_pred_conf.numpy()[0],
     y_pred_loc.numpy()[0],
@@ -45,7 +51,7 @@ pred_boxes_gen = decode_predictions(
     image_height=image_obj.height,
     image_width=image_obj.width,
     n_classes=n_classes,
-    clip_boxes_to_image_bounds=True    
+    post_processing_function=clip_box
 )
 
 predictions = non_max_suppression(

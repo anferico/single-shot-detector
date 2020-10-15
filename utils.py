@@ -34,7 +34,7 @@ def get_output_size(height, width, filter_size, padding, stride):
         tuple(int, int): Pair containing the height and the width of the 
           output feature map.
     """
-
+    
     if isinstance(padding, str):
         if padding == 'same':
             int_padding = int(filter_size / 2)
@@ -98,6 +98,54 @@ def adjust_bounding_box_annotations(annotation, new_image_size):
     annotation['width'] = new_width
     annotation['height'] = new_height
     return annotation
+
+
+def clip_predicted_box(
+    predicted_box, 
+    image_width, 
+    image_height, 
+    visible_area_threshold=0.5
+):
+    """Clips a predicted bounding box if it extends outside the image's 
+    boundaries.
+
+    Args:
+        predicted_box (BoundingBox): `BoundingBox` instance represting 
+          the predicted box.
+        image_width (int): The image's width, in pixels.
+        image_height (int): The image's height, in pixels.
+        visible_area_threshold (float, optional): Threshold for 
+          filtering out boxes that mostly extends outside the image's 
+          boundaries. If the fraction of the visible area (that is, the 
+          portion of the predicted box that is within the image's 
+          boundaries) to the total area of the box is less than this 
+          threshold, the box is discarded and `None` is returned. 
+          Defaults to 0.5.
+
+    Returns:
+        BoundingBox: The predicted box clipped to the image's boundaries 
+          or `None` if the box gets filtered out by the treshold.
+    """
+
+    visible_x_min = max(predicted_box.x_min, 1)
+    visible_y_min = max(predicted_box.y_min, 1)
+    visible_x_max = min(predicted_box.x_max, image_width - 1)
+    visible_y_max = min(predicted_box.y_max, image_height - 1)
+
+    visible_area = ((visible_x_max - visible_x_min) 
+                    * (visible_y_max - visible_y_min))
+    total_area = predicted_box.get_area()
+    fraction_of_visible_area = visible_area / total_area
+    if fraction_of_visible_area >= visible_area_threshold:
+        clipped_box = BoundingBox(
+            visible_x_min,
+            visible_y_min,
+            visible_x_max,
+            visible_y_max
+        )
+    else:
+        clipped_box = None
+    return clipped_box
 
 
 def draw_predicted_boxes(image, predictions, index_to_class_map):

@@ -197,7 +197,7 @@ def get_ssd_inception_v3_feature_map_sizes(height, width):
         list(tuple): List of (height, width) pairs representing the 
           spatial dimensions of the feature maps used for predictions.
     """
-
+    
     if height < 267 or width < 267:
         raise ValueError('Height and width must both be >= 267.')
 
