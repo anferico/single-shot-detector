@@ -1,4 +1,4 @@
-# Single Shot MultiBox Detector (TensforFlow 2.3.0 & Keras)
+# Single Shot MultiBox Detector (TensorFlow 2.3.0 & Keras)
 Keras implementation of [SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325). Unlike the original SSD model, which uses **VGG16** as the "base network" for feature extraction, I'm using **Inception-V3** here (specifically, I've used the version with pre-trained weights available under [`tf.keras.applications.InceptionV3`](https://www.tensorflow.org/api_docs/python/tf/keras/applications/InceptionV3)). 
 
 Apart from using an alternative base network, there are a couple other differences between this version and the original SSD model:
