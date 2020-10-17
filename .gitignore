@@ -11,3 +11,4 @@ tfrecords/
 *.jpg
 *.csv
 create_tf_records_dataset.py
+visualize_loss_history.py
